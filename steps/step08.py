@@ -1,4 +1,5 @@
 import numpy as np
+
 class Variable:
     def __init__(self, data):
         self.data = data
@@ -12,11 +13,15 @@ class Variable:
         self.creator = func
     
     def backward(self):
-        f = self.creator # 関数の取得
-        if f is not None:
-            x = f.input # 関数の入力を取得
-            x.grad = f.backward(self.grad) # 関数のbackwardメソッドを使って勾配を計算
-            x.backward() # 自分よりひとつ前の変数のbackwardメソッドを再帰的に呼ぶ（creatorがNoneの時に終了）
+        funcs = [self.creator] # 次の関数を見つけるたびにここに追加される
+        
+        while funcs:
+            f = funcs.pop()
+            x, y = f.input, f.output
+            x.grad = f.backward(y.grad) # backward メソッドを呼び出す
+
+            if x.creator is not None:
+                funcs.append(x.creator) # ひとつ前の関数をリストに追加
 
 class Function:
     def __call__(self, input):
@@ -67,38 +72,6 @@ a = A(x)
 b = B(a)
 y = C(b) # y = (exp(x^2))^2
 
-assert y.creator == C
-assert y.creator.input == b
-assert y.creator.input.creator == B
-assert y.creator.input.creator.input == a
-assert y.creator.input.creator.input.creator == A
-assert y.creator.input.creator.input.creator.input == x
-
-y.grad = np.array(1.0)
-
-C = y.creator # 関数の取得
-b = C.input # 関数の入力を取得
-b.grad = C.backward(y.grad) # 逆伝播する
-
-B = b.creator
-a = B.input
-a.grad = B.backward(b.grad)
-
-A = a.creator
-x = A.input
-x.grad = A.backward(a.grad)
-
-## 自動バックプロパゲーションを試す
-A = Square()
-B = Exp()
-C = Square()
-
-x = Variable(np.array(0.5))
-a = A(x)
-b = B(a)
-y = C(b) # y = (exp(x^2))^2
-
-print('x.grad (forward): ', x.grad)
 y.grad = np.array(1.0)
 y.backward()
-print('x.grad (backwarded): ',x.grad)
+print(x.grad)

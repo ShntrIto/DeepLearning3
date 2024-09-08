@@ -1,6 +1,10 @@
 import numpy as np
+
 class Variable:
     def __init__(self, data):
+        if data is not None:
+            if not isinstance(data, np.ndarray):
+                raise TypeError('{} is not supportted'.format(type(data)))
         self.data = data
         self.grad = None
         self.creator = None # 変数にとって生みの親である関数
@@ -12,17 +16,23 @@ class Variable:
         self.creator = func
     
     def backward(self):
-        f = self.creator # 関数の取得
-        if f is not None:
-            x = f.input # 関数の入力を取得
-            x.grad = f.backward(self.grad) # 関数のbackwardメソッドを使って勾配を計算
-            x.backward() # 自分よりひとつ前の変数のbackwardメソッドを再帰的に呼ぶ（creatorがNoneの時に終了）
+        if self.grad is None: # grad の初期化に使用する
+            self.grad = np.ones_like(self.data) # self.data と型も同じになるs
+
+        funcs = [self.creator] # 次の関数を見つけるたびにここに追加される
+        while funcs:
+            f = funcs.pop()
+            x, y = f.input, f.output
+            x.grad = f.backward(y.grad) # backward メソッドを呼び出す
+
+            if x.creator is not None:
+                funcs.append(x.creator) # ひとつ前の関数をリストに追加
 
 class Function:
     def __call__(self, input):
         x = input.data
         y = self.forward(x)
-        output = Variable(y)
+        output = Variable(as_array(y))
         output.set_creator(self) # 出力の変数に生みの親である関数を記憶させる
         self.input = input
         self.output = output # 出力も記憶する
@@ -57,48 +67,26 @@ class Exp(Function):
         x = self.input.data
         gx = np.exp(x) * gy
         return gx
+    
+def square(x):
+    f = Square()
+    return f(x)
 
-A = Square()
-B = Exp()
-C = Square()
+def exp(x):
+    f = Exp()
+    return f(x)
 
-x = Variable(np.array(0.5))
-a = A(x)
-b = B(a)
-y = C(b) # y = (exp(x^2))^2
-
-assert y.creator == C
-assert y.creator.input == b
-assert y.creator.input.creator == B
-assert y.creator.input.creator.input == a
-assert y.creator.input.creator.input.creator == A
-assert y.creator.input.creator.input.creator.input == x
-
-y.grad = np.array(1.0)
-
-C = y.creator # 関数の取得
-b = C.input # 関数の入力を取得
-b.grad = C.backward(y.grad) # 逆伝播する
-
-B = b.creator
-a = B.input
-a.grad = B.backward(b.grad)
-
-A = a.creator
-x = A.input
-x.grad = A.backward(a.grad)
-
-## 自動バックプロパゲーションを試す
-A = Square()
-B = Exp()
-C = Square()
+def as_array(x):
+    if np.isscalar(x):
+        return np.array(x)
+    return x
 
 x = Variable(np.array(0.5))
-a = A(x)
-b = B(a)
-y = C(b) # y = (exp(x^2))^2
+y = square(exp(square(x)))
 
-print('x.grad (forward): ', x.grad)
-y.grad = np.array(1.0)
+# y.grad = np.array(1.0)
 y.backward()
-print('x.grad (backwarded): ',x.grad)
+print(x.grad)
+
+# x = Variable(None) # OK
+# x = Variable(1.0) # Error!
