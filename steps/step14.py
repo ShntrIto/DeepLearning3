@@ -30,15 +30,16 @@ class Variable:
                 gxs = (gxs,) # なぜタプルにするんだっけ？
             
             for x, gx in zip(f.inputs, gxs):
-                x.grad = gx
+                if x.grad is None:
+                    x.grad = gx
+                else:
+                    x.grad = x.grad + gx # それまでの勾配に，別の勾配を足し合わせる
 
                 if x.creator is not None:
                     funcs.append(x.creator)
 
-            # x, y = f.input, f.output # 関数の入出力が1つだけだと仮定していた
-            # x.grad = f.backward(y.grad) # backward メソッドを呼び出す
-            # if x.creator is not None:
-            #     funcs.append(x.creator) # ひとつ前の関数をリストに追加
+    def cleargrad(self):
+        self.grad = None
 
 class Function:
     def __call__(self, *inputs): # アスタリスクは可変長引数を表す
@@ -80,7 +81,7 @@ class Square(Function):
 
 class Exp(Function):
     def forward(self, x):
-        y = np.exp(x)
+        y = inp.exp(x)
         return y
     
     def backward(self, gy):
@@ -113,20 +114,13 @@ def as_array(x):
         return np.array(x)
     return x
 
-x = Variable(np.array(5.0))
-y = Variable(np.array(3.0))
-z = add(square(x), square(y))
-
-z.backward()
-print(z.data)
-print(x.grad)
-print(y.grad)
-
-print('---')
-## 今の状態では，同じ変数を使って add を使えない？ 
 a = Variable(np.array(3.0))
 b = add(a, a)
-
-b.backward()
 print(b.data)
-print(a.grad)
+b.backward()
+print('a.grad:', a.grad)
+
+a.cleargrad()
+b = add(add(a, a), a)
+b.backward()
+print('a.grad:', a.grad)

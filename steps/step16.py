@@ -8,18 +8,31 @@ class Variable:
         self.data = data
         self.grad = None
         self.creator = None # 変数にとって生みの親である関数
+        self.generation = 0 # 正しい逆伝播のための世代
     
     def set_creator(self, func):
         '''
         creatorを指定しない変数も存在するので，set_creatorという関数が必要
         '''
         self.creator = func
-    
+        # input側から，output側へ set_creator 関数を実行するので，自分の関数の generation に 1 を加える
+        self.generation = func.generation + 1
+
     def backward(self):
         if self.grad is None: # grad の初期化に使用する
             self.grad = np.ones_like(self.data) # self.data と型も同じになる
 
-        funcs = [self.creator] # 次の関数を見つけるたびにここに追加される
+        funcs = []
+        seen_set = set() # 集合を使うことで，同じ関数を重複して追加することを避ける
+
+        def add_func(f):
+            if f not in seen_set:
+                funcs.append(f)
+                seen_set.add(f)
+                funcs.sort(key=lambda x: x.generation)
+        
+        add_func(self.creator)
+
         while funcs:
             f = funcs.pop()
 
@@ -30,15 +43,16 @@ class Variable:
                 gxs = (gxs,) # なぜタプルにするんだっけ？
             
             for x, gx in zip(f.inputs, gxs):
-                x.grad = gx
+                if x.grad is None:
+                    x.grad = gx
+                else:
+                    x.grad = x.grad + gx # それまでの勾配に，別の勾配を足し合わせる
 
                 if x.creator is not None:
-                    funcs.append(x.creator)
+                    add_func(x.creator)
 
-            # x, y = f.input, f.output # 関数の入出力が1つだけだと仮定していた
-            # x.grad = f.backward(y.grad) # backward メソッドを呼び出す
-            # if x.creator is not None:
-            #     funcs.append(x.creator) # ひとつ前の関数をリストに追加
+    def cleargrad(self):
+        self.grad = None
 
 class Function:
     def __call__(self, *inputs): # アスタリスクは可変長引数を表す
@@ -51,6 +65,7 @@ class Function:
             ys = (ys,) # ys をタプルにする
         outputs = [Variable(as_array(y)) for y in ys]
 
+        self.generation = max([x.generation for x in inputs]) # 入力の中の，最も大きい generation に合わせる
         for output in outputs:
             output.set_creator(self)
         self.inputs = inputs
@@ -80,7 +95,7 @@ class Square(Function):
 
 class Exp(Function):
     def forward(self, x):
-        y = np.exp(x)
+        y = inp.exp(x)
         return y
     
     def backward(self, gy):
@@ -113,20 +128,10 @@ def as_array(x):
         return np.array(x)
     return x
 
-x = Variable(np.array(5.0))
-y = Variable(np.array(3.0))
-z = add(square(x), square(y))
+x = Variable(np.array(2.0)) # x
+a = square(x) # x^2
+y = add(square(a), square(a)) # (x^2)^2 + (x^2)^2 = 2x^4
+y.backward()
 
-z.backward()
-print(z.data)
-print(x.grad)
-print(y.grad)
-
-print('---')
-## 今の状態では，同じ変数を使って add を使えない？ 
-a = Variable(np.array(3.0))
-b = add(a, a)
-
-b.backward()
-print(b.data)
-print(a.grad)
+print(y.data)
+print(x.grad) # 8x^3
