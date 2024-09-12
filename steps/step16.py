@@ -1,4 +1,5 @@
 import numpy as np
+import heapq as hq
 
 class Variable:
     def __init__(self, data):
@@ -30,11 +31,19 @@ class Variable:
                 funcs.append(f)
                 seen_set.add(f)
                 funcs.sort(key=lambda x: x.generation)
+
+        def add_func_heap(f):
+            if f not in seen_set:
+                hq.heappush(funcs, (-1*f.generation, f))
+                seen_set.add(f)
         
         add_func(self.creator)
+        # add_func_heap(self.creator)
 
         while funcs:
             f = funcs.pop()
+            # f = hq.heappop(funcs)[1]
+            # print(type(f))
 
             gys = [output.grad for output in f.outputs]
             gxs = f.backward(*gys)
@@ -73,6 +82,9 @@ class Function:
         # リストの要素が1つの時は，最初の要素を返す
         return outputs if len(outputs) > 1 else outputs[0]
     
+    def __lt__(self, other): # Function()のインスタンス同士の大小確認
+        return self.generation < other.generation
+
     def forward(self, xs):
         raise NotImplementedError()
 
@@ -95,7 +107,7 @@ class Square(Function):
 
 class Exp(Function):
     def forward(self, x):
-        y = inp.exp(x)
+        y = np.exp(x)
         return y
     
     def backward(self, gy):
