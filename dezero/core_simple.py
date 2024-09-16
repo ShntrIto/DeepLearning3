@@ -4,6 +4,12 @@ import weakref
 import contextlib
 from memory_profiler import profile
 
+class Config:
+    '''
+    順伝播・逆伝播のモードを制御
+    '''
+    enable_backprop = True
+
 class Variable:
     __array_priority__ = 200
     def __init__(self, data, name=None):
@@ -114,25 +120,6 @@ class Variable:
 
     def cleargrad(self):
         self.grad = None
-    
-
-class Config:
-    '''
-    順伝播・逆伝播のモードを制御
-    '''
-    enable_backprop = True
-
-@contextlib.contextmanager
-def using_confikg(name, value):
-    old_value = getattr(Config, name)
-    setattr(Config, name, value)
-    try:
-        yield
-    finally:
-        setattr(Config, name, old_value)
-
-def no_grad():
-    return using_config('enable_backprop', False)
 
 class Function:
     def __call__(self, *inputs): # アスタリスクは可変長引数を表す
@@ -245,6 +232,18 @@ class Pow(Function):
         gx = c * x ** (c - 1) * gy
         return gx
 
+@contextlib.contextmanager
+def using_config(name, value):
+    old_value = getattr(Config, name)
+    setattr(Config, name, value)
+    try:
+        yield
+    finally:
+        setattr(Config, name, old_value)
+
+def no_grad():
+    return using_config('enable_backprop', False)
+
 def square(x):
     return Square()(x)
 
@@ -294,55 +293,14 @@ def as_variable(obj):
 def pow(x, c):
     return Pow(c)(x)
 
-Variable.__add__  = add
-Variable.__radd__ = add
-Variable.__mul__ = mul
-Variable.__rmul__ = mul
-Variable.__neg__ = neg
-Variable.__sub__ = sub
-Variable.__rsub__ = rsub
-Variable.__truediv__ = div
-Variable.__rtruediv__ = rdiv
-Variable.__pow__ = pow
-
-a = Variable(np.array(3.0))
-b = Variable(np.array(2.0))
-c = Variable(np.array(1.0))
-
-y = a*b + c
-y.backward()
-print(y)
-print(a.grad)
-print(b.grad) # a*b を b で偏微分したら，得られる値は a になる
-print(c.grad)
-
-x = Variable(np.array(2.0))
-y = x + np.array(3.0)
-print(y) # きちんと Variable インスタンスとなって返ってくる
-
-x = Variable(np.array(2.0))
-y = x + 3.0
-print(y)
-
-x = Variable(np.array(2.0))
-y = 3.0 + x + 1.0
-print(y)
-
-x = Variable(np.array([1.0]))
-y = np.array([2.0]) + x
-print(y)
-
-x = Variable(np.array(2.0))
-y = -x
-print(y)
-
-x = Variable(np.array(2.0))
-y1 = 2.0 - x
-y2 = x - 1.0
-print(y1)
-print(y2)
-
-x = Variable(np.array(3.0))
-y = x ** 3.0
-print(y)
-print(x.grad)
+def setup_variable():
+    Variable.__add__  = add
+    Variable.__radd__ = add
+    Variable.__mul__ = mul
+    Variable.__rmul__ = mul
+    Variable.__neg__ = neg
+    Variable.__sub__ = sub
+    Variable.__rsub__ = rsub
+    Variable.__truediv__ = div
+    Variable.__rtruediv__ = rdiv
+    Variable.__pow__ = pow
