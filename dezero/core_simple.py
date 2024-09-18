@@ -217,7 +217,6 @@ class Div(Function):
         gx0 = gy / x1
         gx1 = gy * (-x0 / x1 ** 2)
         return gx0, gx1
-
 class Pow(Function):
     def __init__(self, c):
         self.c = c # ここでは c を定数として扱う
@@ -230,6 +229,15 @@ class Pow(Function):
         x = self.inputs[0].data
         c = self.c
         gx = c * x ** (c - 1) * gy
+        return gx
+
+class Sin(Function):
+    def forward(self, x):
+        y = np.sin(x)
+        return y
+    def backward(self, gy):
+        x = self.inputs[0].data
+        gx = gy * np.cos(x)
         return gx
 
 @contextlib.contextmanager
@@ -257,6 +265,9 @@ def add(x0, x1):
 def mul(x0, x1):
     x1 = as_array(x1)
     return Mul()(x0, x1)
+
+def sin(x):
+    return Sin()(x)
 
 def as_array(x):
     if np.isscalar(x):
