@@ -124,7 +124,7 @@ class Variable:
 class Function:
     def __call__(self, *inputs): # アスタリスクは可変長引数を表す
         '''
-        入力が複数ある場合に対応させる
+        関数として呼ばれた時に実行される関数s
         '''
         inputs = [as_variable(x) for x in inputs] # 必ず Variable インスタンスとなるようにする
         xs = [x.data for x in inputs]
