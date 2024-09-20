@@ -227,7 +227,7 @@ class Pow(Function):
         return y
     
     def backward(self, gy):
-        x = self.inputs # Variable インスタンスをそのまま使う
+        x, = self.inputs # Variable インスタンスをそのまま使う
         c = self.c
         gx = c * x ** (c - 1) * gy
         return gx
