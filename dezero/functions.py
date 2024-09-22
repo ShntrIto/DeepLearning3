@@ -31,7 +31,7 @@ class Cos(Function):
 def cos(x):
     return Cos()(x)
 
-def Tanh(Function):
+class Tanh(Function):
     def forward(self, x):
         y = np.tanh(x)
         return y
