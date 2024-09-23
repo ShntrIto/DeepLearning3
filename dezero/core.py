@@ -2,6 +2,7 @@ import numpy as np
 import heapq as hq
 import weakref
 import contextlib
+import dezero
 from memory_profiler import profile
 
 class Config:
@@ -59,6 +60,10 @@ class Variable:
     @property
     def dtype(self):
         return self.data.dtype
+    
+    @property
+    def T(self):
+        return dezero.functions.transpose(self)
 
     def set_creator(self, func):
         '''
@@ -67,6 +72,22 @@ class Variable:
         self.creator = func
         # input側から，output側へ set_creator 関数を実行するので，自分の関数の generation に 1 を加える
         self.generation = func.generation + 1
+    
+    def reshape(self, *shape):
+        '''
+        タプルやリスト，または引数をそのまま受け取った場合でも reshape が可能
+        '''
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
+        return dezero.functions.reshape(self, shape)
+
+    def transpose(self, *axes):
+        if len(axes) == 0:
+            axes = None
+        elif len(axes) == 1:
+            if isinstance(axes[0], (tuple, list)) or axes[0] is None:
+                axes = axes[0]
+        return dezero.functions.transpose(self, axes)
 
     def backward(self, retain_grad=False, create_graph=False):
         '''
@@ -232,14 +253,14 @@ class Pow(Function):
         gx = c * x ** (c - 1) * gy
         return gx
 
-class Sin(Function):
-    def forward(self, x):
-        y = np.sin(x)
-        return y
-    def backward(self, gy):
-        x = self.inputs[0].data
-        gx = gy * np.cos(x)
-        return gx
+# class Sin(Function):
+#     def forward(self, x):
+#         y = np.sin(x)
+#         return y
+#     def backward(self, gy):
+#         x = self.inputs[0].data
+#         gx = gy * np.cos(x)
+#         return gx
 
 @contextlib.contextmanager
 def using_config(name, value):
@@ -267,8 +288,8 @@ def mul(x0, x1):
     x1 = as_array(x1)
     return Mul()(x0, x1)
 
-def sin(x):
-    return Sin()(x)
+# def sin(x):
+#     return Sin()(x)
 
 def as_array(x):
     if np.isscalar(x):
