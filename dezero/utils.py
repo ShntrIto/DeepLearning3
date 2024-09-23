@@ -62,3 +62,38 @@ def plot_dot_graph(output, verbose=True, to_file='graph.png'):
     extension = os.path.splitext(to_file)[1][1:] # extension とそれ以外を分け，'.' を含まない拡張子を抽出
     cmd = 'dot {} -T {} -o {}'.format(graph_path, extension, to_file)
     subprocess.run(cmd, shell=True)
+
+def reshape_sum_backward(gy, x_shape, axis, keepdims):
+    # DeZero の GitHub からそのまま引用
+    ndim = len(x_shape)
+    tupled_axis = axis
+    if axis is None:
+        tupled_axis = None
+    elif not isinstance(axis, tuple):
+        tupled_axis = (axis,)
+
+    if not (ndim == 0 or tupled_axis is None or keepdims):
+        actual_axis = [a if a >= 0 else a + ndim for a in tupled_axis]
+        shape = list(gy.shape)
+        for a in sorted(actual_axis):
+            shape.insert(a, 1)
+    else:
+        shape = gy.shape
+
+    gy = gy.reshape(shape)  # reshape
+    return gy
+
+def sum_to(x, shape):
+    # DeZero の GitHub から引用
+    # axis に沿った総和を返す
+    import pdb
+    pdb.set_trace()
+    ndim = len(shape)
+    lead = x.ndim - ndim
+    lead_axis = tuple(range(lead))
+
+    axis = tuple([i + lead for i, sx in enumerate(shape) if sx == 1])
+    y = x.sum(lead_axis + axis, keepdims=True)
+    if lead > 0:
+        y = y.squeeze(lead_axis)
+    return y

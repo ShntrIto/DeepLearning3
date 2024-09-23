@@ -142,6 +142,9 @@ class Variable:
 
     def cleargrad(self):
         self.grad = None
+    
+    def sum(self, axis=None, keepdims=False):
+        return dezero.functions.sum(self, axis, keepdims)
 
 class Function:
     def __call__(self, *inputs): # アスタリスクは可変長引数を表す
@@ -200,20 +203,31 @@ class Exp(Function):
     
 class Add(Function):
     def forward(self, x0, x1):
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
         y = x0 + x1
         return (y,) # タプルを返す
     
     def backward(self, gy):
-        return gy, gy # 1つの入力に対して複数の出力
+        gx0, gx1 = gy, gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = dezero.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dezero.functions.sum_to(gx1, self.x1_shape)
+        return gx0, gx1 # 1つの入力に対して複数の出力
 
 class Mul(Function):
     def forward(self, x0, x1):
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
         y = x0 * x1
         return y
     
     def backward(self, gy):
         x0, x1 = self.inputs # Variable インスタンスをそのまま使う
-        return gy * x1, gy * x0 # ここでも 「*演算子」が呼ばれ，計算グラフが構築される 
+        gx0 = gy * x1
+        gx1 = gy * x0
+        if self.x0_shape != self.x1_shape:
+            gx0 = dezero.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dezero.functions.sum_to(gx1, self.x1_shape)
+        return gx0, gx1 # ここでも 「*演算子」が呼ばれ，計算グラフが構築される 
 
 class Neg(Function):
     def forward(self, x):
@@ -224,13 +238,20 @@ class Neg(Function):
 
 class Sub(Function):
     def forward(self, x0, x1):
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
         y = x0 - x1
         return y
     def backward(self, gy):
-        return gy, -gy
+        gx0 = gy
+        gx1 = -gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = dezero.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dezero.functions.sum_to(gx1, self.x1_shape)
+        return gx0, gx1
 
 class Div(Function):
     def forward(self, x0, x1):
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
         y = x0 / x1
         return y
     
@@ -238,6 +259,9 @@ class Div(Function):
         x0, x1 = self.inputs # Variable インスタンスをそのまま使う
         gx0 = gy / x1
         gx1 = gy * (-x0 / x1 ** 2)
+        if self.x0_shape != self.x1_shape:
+            gx0 = dezero.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dezero.functions.sum_to(gx1, self.x1_shape)
         return gx0, gx1
 class Pow(Function):
     def __init__(self, c):
