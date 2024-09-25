@@ -86,8 +86,6 @@ def reshape_sum_backward(gy, x_shape, axis, keepdims):
 def sum_to(x, shape):
     # DeZero の GitHub から引用
     # axis に沿った総和を返す
-    import pdb
-    pdb.set_trace()
     ndim = len(shape)
     lead = x.ndim - ndim
     lead_axis = tuple(range(lead))

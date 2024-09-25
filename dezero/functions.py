@@ -95,7 +95,7 @@ class Sum(Function):
     def backward(self, gy):
         # ただ，入力と同じ形の勾配にして返すだけ
         gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)
-        gx = broadcast_to(gy, self.s_shape)
+        gx = broadcast_to(gy, self.x_shape)
         return gx
     
 def sum(x, axis=None, keepdims=False):
@@ -150,3 +150,22 @@ class MatMul(Function):
     
 def matmul(x, W):
     return MatMul()(x, W)
+
+class MSE(Function):
+    # メモリ効率化のためには，関数のスコープを抜けたら自動的にメモリから消去された方が良い
+    # そのため，単なる関数ではなく，Function を継承した MSE インスタンスを使って計算すると良い
+    def forward(self, x0, x1):
+        diff = x0 - x1
+        y = (diff ** 2).sum() / len(diff)
+        return y
+
+    def backward(self, gy):
+        x0, x1 = self.inputs
+        diff = x0 - x1
+        gy = broadcast_to(gy, diff.shape)
+        gx0 = gy * diff * (2. / len(diff))
+        gx1 = -gx0
+        return gx0, gx1
+
+def mse(x0, x1):
+    return MSE()(x0, x1)
