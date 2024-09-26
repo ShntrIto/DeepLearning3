@@ -4,7 +4,7 @@ if '__file__' in globals():
 
 import numpy as np
 from dezero.core import Function, as_variable
-from dezero import utils
+from dezero import utils, cuda
 
 class Sin(Function):
     def forward(self, x):
@@ -44,6 +44,20 @@ class Tanh(Function):
 
 def tanh(x):
     return Tanh()(x)
+
+class Exp(Function):
+    def forward(self, x):
+        xp = cuda.get_array_module(x)
+        y = xp.exp(x)
+        return y
+
+    def backward(self, gy):
+        y = self.outputs[0]() # weakref 弱参照
+        gx = gy * y
+        return gx
+
+def exp(x):
+    return Exp()(x)
 
 class Reshape(Function):
     def __init__(self, shape):
@@ -169,3 +183,45 @@ class MSE(Function):
 
 def mse(x0, x1):
     return MSE()(x0, x1)
+
+class Linear(Function):
+    def forward(self, x, W, b):
+        y = x.dot(W)
+        if b is not None:
+            y += b
+        return y
+    
+    def backward(self, gy):
+        x, W, b = self.inputs
+        gb = None if b.data is None else sum_to(gy, b) # TODO: なぜsum_to(gy, b)なのか分からないから理解する
+        gx = matmul(gy, W.T)
+        gW = matmul(x.T, gy)
+        return gx, gW, gb
+
+def linear_simple(x, W, b=None):
+    # メモリ改善のトリックを使った linear 関数
+    # Variable インスタンスの t が必要とされないことを考慮して，計算後に t をメモリから解放する
+    x, W = as_variable(x), as_variable(W)
+    t = matmul(x, W)
+    if b is None:
+        return t
+
+    y = t + b
+    t.data = None
+    return y
+
+class Sigmoid(Function):
+    def forward(self, x):
+        xp = cuda.get_array_module(x)
+        y = xp.tanh(x * 0.5) * 0.5 + 0.5
+        return y
+
+    def backward(self, gy):
+        y = self.outputs[0]() # 弱参照
+        gx = gy * y * (1-y)
+        return gx
+
+def sigmoid_simple(x):
+    x = as_variable(x)
+    y = 1 / (1 + exp(-x))
+    return y
