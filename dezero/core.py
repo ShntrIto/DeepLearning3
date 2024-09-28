@@ -146,6 +146,11 @@ class Variable:
     def sum(self, axis=None, keepdims=False):
         return dezero.functions.sum(self, axis, keepdims)
 
+class Parameter(Variable):
+    # Variable を継承するだけ
+    # Variable と全く同じ機能を持つが，Parameter と Variable は区別ができる
+    pass
+
 class Function:
     def __call__(self, *inputs): # アスタリスクは可変長引数を表す
         '''
