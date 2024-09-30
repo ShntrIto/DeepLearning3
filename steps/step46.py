@@ -13,12 +13,12 @@ x = np.random.randn(100, 1)
 y = np.sin(2 * np.pi * x) + np.random.rand(100, 1)
 
 # ハイパーパラメータ
-lr = 0.3
+lr = 0.275
 max_iter = 10000
 hidden_size = 10
 
 model = MLP((hidden_size, 1))
-optimizer = optimizers.SGD(lr)
+optimizer = optimizers.MomentumSGD(lr)
 optimizer.setup(model)
 
 for i in range(max_iter):

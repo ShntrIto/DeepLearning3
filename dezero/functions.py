@@ -231,3 +231,60 @@ def sigmoid_simple(x):
     x = as_variable(x)
     y = 1 / (1 + exp(-x))
     return y
+
+class GetItem(Function):
+    def __init__(self, slices):
+        self.slices = slices
+    
+    def forward(self, x):
+        y = x[self.slices]
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        f = GetItemGrad(self.slices, x.shape)
+        return f(gy)
+
+def get_item(x, slices):
+    return GetItem(slices)(x)
+
+class GetItemGrad(Function):
+    def __init__(self, slices, in_shape):
+        self.slices = slices
+        self.in_shape = in_shape
+    
+    def forward(self, gy):
+        gx = np.zeros(self.in_shape)
+        np.add.at(gx, self.slices, gy) # gx の self.slices に gy を加算する
+        return gx
+    
+    def backward(self, ggx):
+        return get_item(ggx, self.slices)
+
+def softmax_simple(x, axis=1):
+    x = as_variable(x)
+    y = exp(x)
+    sum_y = sum(y, axis=axis, keepdim=True)
+    return y / sum_y
+
+class Softmax(Function):
+    def __init__(self, axis=1):
+        self.axis = axis
+    
+    def forward(self, x):
+        x = as_variable(x)
+        y = exp(x)
+        sum_y = sum(y, axis=self.axis, keepdim=True)
+        return y / sum_y
+
+    def backward(self, gy):
+        # DeZero からそのまま引用
+        # backward の導出が理解できていない
+        y = self.outputs[0]()
+        gx = y * gy
+        sumdx = gx.sum(axis=self.axis, keepdims=True)
+        gx -= y * sumdx
+        return gx
+
+def softmax(x, axis=1):
+    return Softmax(axis)(x)
