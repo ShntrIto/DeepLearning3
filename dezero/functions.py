@@ -277,9 +277,8 @@ class GetItemGrad(Function):
 
 def softmax_simple(x, axis=1):
     x = as_variable(x)
-    x = x - x.max(axis=axis, keepdims=True)  # Subtract max value to prevent overflow
     y = exp(x)
-    sum_y = sum(y, axis=axis, keepdim=True)
+    sum_y = sum(y, axis=axis, keepdims=True)
     return y / sum_y
 
 class Softmax(Function):
@@ -289,7 +288,7 @@ class Softmax(Function):
     def forward(self, x):
         x = as_variable(x)
         y = exp(x)
-        sum_y = sum(y, axis=self.axis, keepdim=True)
+        sum_y = sum(y, axis=self.axis, keepdims=True)
         return y / sum_y
 
     def backward(self, gy):
@@ -304,7 +303,7 @@ class Softmax(Function):
 def softmax(x, axis=1):
     return Softmax(axis)(x)
 
-def Clip(Function):
+class Clip(Function):
     def __init__(self, x_min, x_max):
         self.x_min = x_min
         self.x_max = x_max
@@ -326,9 +325,12 @@ def clip(x, x_min, x_max):
 def softmax_cross_entropy_simple(x, t):
     x, t = as_variable(x), as_variable(t)
     N = x.shape[0] # データの数
-    p = softmax(x)
+    p = softmax_simple(x)
     p = clip(p, 1e-15, 1.0)  # log(0) を防ぐために，p の値を 1e-15 から 1.0 の間に収める
     log_p = log(p)
-    tlog_p = log_p[np.arange(N), t.data]
+    # TODO: これは何？t.data を要素番号としている意味が分からない
+    # t.data って0から順番に値を取るわけじゃないよね?
+    import pdb; pdb.set_trace()
+    tlog_p = log_p[np.arange(N), t.data] 
     y = -1 * sum(tlog_p) / N
     return y
