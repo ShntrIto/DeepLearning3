@@ -328,9 +328,6 @@ def softmax_cross_entropy_simple(x, t):
     p = softmax_simple(x)
     p = clip(p, 1e-15, 1.0)  # log(0) を防ぐために，p の値を 1e-15 から 1.0 の間に収める
     log_p = log(p)
-    # TODO: これは何？t.data を要素番号としている意味が分からない
-    # t.data って0から順番に値を取るわけじゃないよね?
-    import pdb; pdb.set_trace()
-    tlog_p = log_p[np.arange(N), t.data] 
+    tlog_p = log_p[np.arange(N), t.data] # t.data は教師ラベル
     y = -1 * sum(tlog_p) / N
     return y
