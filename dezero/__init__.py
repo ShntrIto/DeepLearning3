@@ -19,5 +19,9 @@ else:
     from dezero.core import setup_variable
 
 from dezero.models import Model
+from dezero.datasets import Dataset
+from dezero.dataloaders import DataLoader
+from dezero.optimizers import Optimizer
+from dezero.optimizers import SGD
 
 setup_variable()

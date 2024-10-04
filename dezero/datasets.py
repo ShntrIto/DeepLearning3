@@ -23,7 +23,7 @@ class Dataset:
         if self.label is None: # 教師無しの場合（ラベルが None の場合）でも対応できる
             return self.transform(self.data[index]), None
         else:
-            return sel.transform(self.data[index]), self.target_transform(self.label[index])
+            return self.transform(self.data[index]), self.target_transform(self.label[index])
         
     def __len__(self):
         # データセットの"長さ"って，多次元配列の場合どの"長さ"なの？
