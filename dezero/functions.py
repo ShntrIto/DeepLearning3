@@ -282,23 +282,43 @@ def softmax_simple(x, axis=1):
     return y / sum_y
 
 class Softmax(Function):
+    # DeZero からそのまま引用
+    # 自分の実装は何かが間違っている...
     def __init__(self, axis=1):
         self.axis = axis
-    
+
     def forward(self, x):
-        x = as_variable(x)
-        y = exp(x)
-        sum_y = sum(y, axis=self.axis, keepdims=True)
-        return y / sum_y
+        xp = cuda.get_array_module(x)
+        y = x - x.max(axis=self.axis, keepdims=True)
+        y = xp.exp(y)
+        y /= y.sum(axis=self.axis, keepdims=True)
+        return y
 
     def backward(self, gy):
-        # DeZero からそのまま引用
-        # backward の導出が理解できていない
         y = self.outputs[0]()
         gx = y * gy
         sumdx = gx.sum(axis=self.axis, keepdims=True)
         gx -= y * sumdx
         return gx
+    
+# class Softmax(Function):
+#     def __init__(self, axis=1):
+#         self.axis = axis
+    
+#     def forward(self, x):
+#         x = as_variable(x)
+#         y = exp(x)
+#         sum_y = sum(y, axis=self.axis, keepdims=True)
+#         return y / sum_y
+
+#     def backward(self, gy):
+#         # DeZero からそのまま引用
+#         # backward の導出が理解できていない
+#         y = self.outputs[0]()
+#         gx = y * gy
+#         sumdx = gx.sum(axis=self.axis, keepdims=True)
+#         gx -= y * sumdx
+#         return gx
 
 def softmax(x, axis=1):
     return Softmax(axis)(x)
@@ -323,8 +343,30 @@ def clip(x, x_min, x_max):
     return Clip(x_min, x_max)(x)
 
 class SoftmaxCrossEntropy(Function):
-    # TODO: 実装する
+    # DeZero からそのまま引用
+    # forward は理解したが，backward は理解してない
+    def forward(self, x, t):
+        N = x.shape[0]
+        log_z = utils.logsumexp(x, axis=1)
+        log_p = x - log_z
+        log_p = log_p[np.arange(N), t.ravel()]
+        y = -log_p.sum() / np.float32(N)
+        return y
 
+    def backward(self, gy):
+        x, t = self.inputs
+        N, CLS_NUM = x.shape
+
+        gy *= 1/N
+        y = softmax(x)
+        # convert to one-hot
+        xp = cuda.get_array_module(t.data)
+        t_onehot = xp.eye(CLS_NUM, dtype=t.dtype)[t.data]
+        y = (y - t_onehot) * gy
+        return y
+
+def softmax_cross_entropy(x, t):
+    return SoftmaxCrossEntropy()(x, t)
 
 def softmax_cross_entropy_simple(x, t):
     x, t = as_variable(x), as_variable(t)
