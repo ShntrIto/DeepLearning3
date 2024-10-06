@@ -200,6 +200,7 @@ def mse(x0, x1):
 
 class Linear(Function):
     def forward(self, x, W, b):
+        import pdb; pdb.set_trace()
         y = x.dot(W)
         if b is not None:
             y += b
