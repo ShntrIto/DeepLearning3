@@ -23,8 +23,11 @@ test_set = dezero.datasets.MNIST(train=False, transform=f)
 train_loader = dezero.DataLoader(train_set, batch_size)
 test_loader = dezero.DataLoader(test_set, batch_size, shuffle=False)
 
-model = MLP((hidden_size, 10))
-optimizer = optimizers.SGD().setup(model)
+# model = MLP((hidden_size, 10))
+# model = MLP((hidden_size, 10), activation=F.relu) 
+model = MLP((hidden_size, hidden_size, 10), activation=F.relu) 
+# optimizer = optimizers.SGD().setup(model)
+optimizer = optimizers.Adam().setup(model)
 
 for epoch in range(max_epoch):
     sum_loss, sum_acc = 0, 0
