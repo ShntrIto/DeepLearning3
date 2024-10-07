@@ -18,8 +18,8 @@ max_epoch = 5
 batch_size = 100
 hidden_size = 1000
 
-train_set = dezero.datasets.MNIST(train=True, transform=None)
-test_set = dezero.datasets.MNIST(train=False, transform=None)
+train_set = dezero.datasets.MNIST(train=True, transform=f) # 教科書の誤植(?) flatten しないと内積が計算できない
+test_set = dezero.datasets.MNIST(train=False, transform=f)
 train_loader = dezero.DataLoader(train_set, batch_size)
 test_loader = dezero.DataLoader(test_set, batch_size, shuffle=False)
 
@@ -29,7 +29,7 @@ optimizer = optimizers.SGD().setup(model)
 for epoch in range(max_epoch):
     sum_loss, sum_acc = 0, 0
     for x, t in train_loader:
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         y = model(x)
         loss = F.softmax_cross_entropy(y, t)
         acc = F.accuracy(y, t)
