@@ -2,6 +2,7 @@ import weakref
 import numpy as np
 import dezero.functions as F
 from dezero.core import Parameter
+from dezero import cuda
 
 class Layer:
     def __init__(self):
@@ -37,6 +38,16 @@ class Layer:
     def cleargrads(self):
         for param in self.params():
             param.cleargrad()
+    
+    def to_cpu(self):
+        # Linear クラスのパラメータを CPU に移動させる
+        for param in self.params():
+            param.to_cpu()
+    
+    def to_gpu(self):
+        # Linear クラスのパラメータを GPU に移動させる
+        for param in self.params():
+            param.to_gpu()
 
 class Linear(Layer):
     def __init__(self, out_size, nobias=False, dtype=np.float32, in_size=None):
@@ -54,16 +65,17 @@ class Linear(Layer):
         else:
             self.b = Parameter(np.zeros(out_size, dtype=dtype), name='b')
     
-    def _init_W(self):
+    def _init_W(self, xp=np):
         I, O = self.in_size, self.out_size
-        W_data = np.random.randn(I, O).astype(self.dtype) * np.sqrt(1 / I) # 変数をわざわざ分けているのは可読性のため？
+        W_data = xp.random.randn(I, O).astype(self.dtype) * np.sqrt(1 / I) # 変数をわざわざ分けているのは可読性のため？
         self.W.data = W_data
 
     def forward(self, x):
         # データを流すタイミング（linearの実行時）で重みを初期化
         if self.W.data is None:
             self.in_size = x.shape[1]
-            self._init_W()
+            xp = cuda.get_array_module(x)
+            self._init_W(xp)
 
         y = F.linear(x, self.W, self.b)
         return y

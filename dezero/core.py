@@ -5,6 +5,12 @@ import contextlib
 import dezero
 from memory_profiler import profile
 
+try:
+    import cupy
+    array_types = (np.ndarray, cupy.ndarray)
+except ImportError:
+    array_types = (np.ndarray)
+
 class Config:
     '''
     順伝播・逆伝播のモードを制御
@@ -18,7 +24,7 @@ class Variable:
         name: 変数の名前，計算グラフの可視化に用いる
         '''
         if data is not None:
-            if not isinstance(data, np.ndarray):
+            if not isinstance(data, array_types):
                 raise TypeError('{} is not supportted'.format(type(data)))
         self.data = data
         self.name = name # 代入した変数への名前ではなく，この数値が持つ名前
@@ -94,7 +100,8 @@ class Variable:
         retain_grad: 中間の変数に対して勾配を保持するかどうか
         '''
         if self.grad is None: # grad の初期化に使用する
-            self.grad = Variable(np.ones_like(self.data)) # grad も Variable インスタンスとする
+            xp = dezero.cuda.get_array_module(self.data)
+            self.grad = Variable(xp.ones_like(self.data)) # grad も Variable インスタンスとする
 
         funcs = []
         seen_set = set() # 集合を使うことで，同じ関数を重複して追加することを避ける
@@ -145,6 +152,14 @@ class Variable:
     
     def sum(self, axis=None, keepdims=False):
         return dezero.functions.sum(self, axis, keepdims)
+    
+    def to_cpu(self):
+        if self.data is not None:
+            self.data = dezero.cuda.as_numpy(self.data)
+    
+    def to_gpu(self):
+        if self.data is not None:
+            self.data = dezero.cuda.as_cupy(self.data)
 
 class Parameter(Variable):
     # Variable を継承するだけ
@@ -310,38 +325,38 @@ def exp(x):
     return Exp()(x)
 
 def add(x0, x1):
-    x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Add()(x0, x1)
 
 def mul(x0, x1):
-    x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Mul()(x0, x1)
 
 # def sin(x):
 #     return Sin()(x)
 
-def as_array(x):
+def as_array(x, array_module=np):
     if np.isscalar(x):
-        return np.array(x)
+        return array_module.array(x)
     return x
 
 def neg(x):
     return Neg()(x)
 
 def sub(x0, x1):
-    x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Sub()(x0, x1)
 
 def rsub(x0, x1):
-    x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Sub()(x1, x0)
 
 def div(x0, x1):
-    x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Div()(x0, x1)
 
 def rdiv(x0, x1):
-    x1 = as_array(x1)
+    x1 = as_array(x1, dezero.cuda.get_array_module(x0.data))
     return Div()(x1, x0)
 
 def as_variable(obj):
