@@ -11,7 +11,7 @@ class Layer:
     def __setattr__(self, name, value):
         # インスタンス変数を設定する際に呼び出される特殊メソッド
         if isinstance(value, (Parameter, Layer)):
-            self._params.add(name)
+            self._params.add(name) # インスタンス名を保存
         super().__setattr__(name, value)
 
     def __call__(self, *inputs):
@@ -38,6 +38,17 @@ class Layer:
     def cleargrads(self):
         for param in self.params():
             param.cleargrad()
+    
+    def _flatten_params(self, params_dict, parent_key=""):
+        for name in self._params:
+            obj = self.__dict__[name]
+            # REVIEW: これだと parent_key の有無にかかわらず / が付くのではない？
+            key = parent_key + '/' + name if parent_key else name 
+
+            if isinstance(obj, Layer):
+                obj._flatten_params(params_dict, key)
+            else:
+                params_dict[key] = obj
     
     def to_cpu(self):
         # Linear クラスのパラメータを CPU に移動させる

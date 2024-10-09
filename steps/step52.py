@@ -32,11 +32,10 @@ optimizer = optimizers.Adam().setup(model)
 if dezero.cuda.gpu_enable:
     print('Use GPU!')
     train_loader.to_gpu()
-    test_loader.to_gpu()
     model.to_gpu()
 
+print('Learning Start!')
 for epoch in range(max_epoch):
-    print('Learning Start!')
     sum_loss, sum_acc = 0, 0
     for x, t in train_loader:
         y = model(x)
@@ -53,14 +52,14 @@ for epoch in range(max_epoch):
     print('epoch: {}'.format(epoch+1))
     print('train loss: {:.4f}, accuracy: {:.4f}'.format(sum_loss / len(train_set), sum_acc / len(train_set)))
 
-    sum_loss, sum_acc = 0, 0
-    with dezero.no_grad():
-        for x, t in test_loader:
-            y = model(x)
-            loss = F.softmax_cross_entropy(y, t)
-            acc = F.accuracy(y, t)
-            sum_loss += float(loss.data) * len(t)
-            sum_acc += float(acc.data) * len(t)
+    # sum_loss, sum_acc = 0, 0
+    # with dezero.no_grad():
+    #     for x, t in test_loader:
+    #         y = model(x)
+    #         loss = F.softmax_cross_entropy(y, t)
+    #         acc = F.accuracy(y, t)
+    #         sum_loss += float(loss.data) * len(t)
+    #         sum_acc += float(acc.data) * len(t)
     
-    # テストの結果を表示
-    print('test loss: {:.4f}, accuracy: {:.4f}'.format(sum_loss / len(test_set), sum_acc / len(test_set)))
+    # # テストの結果を表示
+    # print('test loss: {:.4f}, accuracy: {:.4f}'.format(sum_loss / len(test_set), sum_acc / len(test_set)))
