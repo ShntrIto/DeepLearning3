@@ -50,6 +50,29 @@ class Layer:
             else:
                 params_dict[key] = obj
     
+    def save_weights(self, path):
+        self.to_cpu()
+        
+        params_dict = {}
+        self._flatten_params(params_dict)
+        array_dict = {key: param.data for key, param in params_dict.items() 
+                      if param is not None}
+        # ファイルの作成時には，user interrupt が発生することを想定して
+        # try 文を使う
+        try:
+            np.savez_compressed(path, **array_dict)
+        except(Exception, KeyboardInterrupt) as e:
+            if os.path.exists(path):
+                os.remove(path)
+            raise
+    
+    def load_weights(self, path):
+        npz = np.load(path)
+        params_dict = {}
+        self._flatten_params(params_dict)
+        for key, param in params_dict.items():
+            param.data = npz[key]
+    
     def to_cpu(self):
         # Linear クラスのパラメータを CPU に移動させる
         for param in self.params():
