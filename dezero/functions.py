@@ -2,6 +2,7 @@ if '__file__' in globals():
     import os, sys
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
+import dezero
 import numpy as np
 from dezero.core import Function, Variable, as_variable, as_array
 from dezero import utils, cuda
@@ -403,3 +404,15 @@ class ReLU(Function):
 
 def relu(x):
     return ReLU()(x)
+
+def dropout(x, dropout_ratio=0.5):
+    x = as_variable(x)
+    
+    if dezero.Config.train:
+        xp = cuda.get_array_module(x)
+        mask = xp.random.rand(*x.shape) > dropout_ratio
+        scale = xp.array(1.0 - dropout_ratio).astype(x.dtype)
+        y = x * mask / scale
+        return y
+    else:
+        return x

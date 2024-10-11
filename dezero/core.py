@@ -16,6 +16,19 @@ class Config:
     順伝播・逆伝播のモードを制御
     '''
     enable_backprop = True
+    train = True
+
+@contextlib.contextmanager
+def using_config(name, value):
+    old_value = getattr(Config, name) # Config インスタンスの name の値を確認
+    setattr(Config, name, value) # 指定の値に変更
+    try:
+        yield
+    finally: # try 節が終わる一歩手前に実行される（今回の場合，また以前の学習モードに切り替わる）
+        setattr(Config, name, old_value)
+
+def test_mode():
+    return using_config('train', False)
 
 class Variable:
     __array_priority__ = 200
@@ -296,24 +309,6 @@ class Pow(Function):
         c = self.c
         gx = c * x ** (c - 1) * gy
         return gx
-
-# class Sin(Function):
-#     def forward(self, x):
-#         y = np.sin(x)
-#         return y
-#     def backward(self, gy):
-#         x = self.inputs[0].data
-#         gx = gy * np.cos(x)
-#         return gx
-
-@contextlib.contextmanager
-def using_config(name, value):
-    old_value = getattr(Config, name)
-    setattr(Config, name, value)
-    try:
-        yield
-    finally:
-        setattr(Config, name, old_value)
 
 def no_grad():
     return using_config('enable_backprop', False)
