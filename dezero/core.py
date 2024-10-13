@@ -107,6 +107,20 @@ class Variable:
             if isinstance(axes[0], (tuple, list)) or axes[0] is None:
                 axes = axes[0]
         return dezero.functions.transpose(self, axes)
+    
+    def unchain(self):
+        self.creator = None
+        return self
+    
+    def unchain_backward(self):
+        if self.creator is not None:
+            funcs = [self.creator]
+            while funcs:
+                f = funcs.pop()
+                for x in f.inputs:
+                    if x.creator is not None:
+                        funcs.append(x.creator)
+                        x.unchain()
 
     def backward(self, retain_grad=False, create_graph=False):
         '''

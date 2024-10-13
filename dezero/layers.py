@@ -152,3 +152,20 @@ class Conv2d(Layer):
         y = F.conv2d_simple(x, self.W, self.b, stride=self.stride, pad=self.pad)
         # y = F.conv2d(x, self.W, self.b, stride=self.stride, pad=self.pad)
         return y
+
+class RNN(Layer):
+    def __init__(self, hidden_size, in_size=None):
+        super().__init__()
+        self.x2h = Linear(hidden_size, in_size=in_size)
+        self.h2h = Linear(hidden_size, in_size=hidden_size, nobias=True) # bias は一つでいい
+        self.h = None
+    
+    def reset_state(self):
+        self.h = None
+        
+    def forward(self, x):
+        if self.h is None:
+            h_new = F.tanh(self.x2h(x))
+        else:
+            h_new = F.tanh(self.x2h(x) + self.h2h(self.h)) # ひとつ前の h に重みを掛けて足し合わせる
+        return h_new
