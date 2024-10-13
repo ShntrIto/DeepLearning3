@@ -480,3 +480,4 @@ def clip(x, x_min, x_max):
 # 循環参照を防ぐためにここに書いている
 from dezero.functions_conv import im2col
 from dezero.functions_conv import conv2d_simple
+from dezero.functions_conv import pooling_simple
